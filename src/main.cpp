@@ -4,6 +4,8 @@
 
 using namespace Birb;
 
+const int level_count = 11;
+
 int main(int argc, char** argv)
 {
 	Debug::Log("Creating the window");
@@ -23,11 +25,14 @@ int main(int argc, char** argv)
 
 	/* The victory screen stuff */
 	Scene victory_scene;
-	Entity congratulation_text("Victory text", Vector2int(128, 128), EntityComponent::Text("Congratulations!", &resources.big_font, &Colors::White));
+	Entity congratulation_text("Victory text", Vector2int(128, 128), EntityComponent::Text("Congratulation!", &resources.big_font, &Colors::White));
 	Entity congratulation_text_2("Victory text 2", Vector2int(128, 256), EntityComponent::Text("You managed to yoink all of the diamonds\nand survived all of the challenges\nthat this game threw at you\n\nNow go play some other Ludum Dare games ;)", &resources.small_font, &Colors::White));
+	Color pass_timer_color(0xabff93);
+	Entity pass_timer_text("Pass timer text", Vector2int(128, 512), EntityComponent::Text("No time for you cheater :/", &resources.big_font, &pass_timer_color));
 
 	victory_scene.AddObject(&congratulation_text);
 	victory_scene.AddObject(&congratulation_text_2);
+	victory_scene.AddObject(&pass_timer_text);
 
 	/* Timer text */
 	Entity ten_second_timer_text("Timer text", Vector2int(window.dimensions.x - 150, window.dimensions.y - 32), EntityComponent::Text("", &resources.small_font, &Colors::White));
@@ -74,15 +79,6 @@ int main(int argc, char** argv)
 
 	/* Read all of the levels */
 	int current_level = 0;
-	const int level_count = 6;
-	std::string level_names[level_count] = {
-		"level_1",
-		"level_2",
-		"level_3",
-		"level_4",
-		"level_5",
-		"level_6"
-	};
 
 	/* Custom current level */
 	if (argc == 2)
@@ -91,7 +87,7 @@ int main(int argc, char** argv)
 
 	GameLevel game_levels[level_count];
 	for (int i = 0; i < level_count; ++i)
-		game_levels[i] = GameLevel(level_names[i], tile_size, resources);
+		game_levels[i] = GameLevel("level_" + std::to_string(i + 1), tile_size, resources);
 
 	/* Check if all of the levels loaded up fine */
 	for (int i = 0; i < level_count; ++i)
@@ -103,6 +99,14 @@ int main(int argc, char** argv)
 
 	Debug::Log("Starting the game loop");
 	game_levels[current_level].Activate();
+
+	Timer pass_timer;
+
+	/* Only start the timer if the player starts the game
+	 * all the way from the beginning */
+	if (current_level == 0)
+		pass_timer.Start();
+
 
 	bool ApplicationRunning = true;
 	bool victory_screen = false;
@@ -240,6 +244,14 @@ int main(int argc, char** argv)
 		}
 		else
 		{
+			/* If the pass timer is still running, stop it and set the victory text */
+			if (pass_timer.running)
+			{
+				std::cout << "Timer running..." << std::endl;
+				pass_timer.Stop();
+				pass_timer_text.SetText("Total time spent: " + pass_timer.DigitalFormat());
+			}
+
 			/* Show the victory screen */
 			victory_scene.Render();
 		}

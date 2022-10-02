@@ -26,8 +26,7 @@ GameLevel::GameLevel(std::string level_name, int tile_size, ResourceLoader& reso
 	level_has_guards = false;
 	level_finished = false;
 
-	std::string level_path = "./res/levels/" + level_name + "/";
-	std::string level_file_path = level_path + "level_pixels.bmp";
+	std::string level_file_path = "./res/levels/" + level_name + ".bmp";
 
 	SDL_Surface* level_surface = SDL_LoadBMP(level_file_path.c_str());
 	if (!level_surface)
@@ -232,7 +231,7 @@ void GameLevel::StopGuards()
 }
 
 std::vector<std::future<void>> guard_futures;
-static void MoveGuard(Entity* guard, const int& tile_size, const Scene& level_scene, Rect* level_tile_rects, Random rand, int* last_guard_side, size_t guard_index, Polygon* guard_lamps, const std::vector<Gate>& gates)
+static void MoveGuard(Entity* guard, const int& tile_size, const Scene& level_scene, Rect* level_tile_rects, Random rand, int* last_guard_side, size_t guard_index, Polygon* guard_lamps, const std::vector<Gate>& gates, const Entity& player)
 {
 	Rect test_pos = guard->rect;
 
@@ -280,6 +279,11 @@ static void MoveGuard(Entity* guard, const int& tile_size, const Scene& level_sc
 			}
 		}
 
+		/* If the player walks behind a guard, the guard won't turn around to look at the player
+		 * Let's call it sneaking ;) */
+		if (Physics::RectCollision(sides[i], player.rect))
+			continue;
+
 		if (valid_side)
 			valid_sides.push_back(i);
 	}
@@ -323,30 +327,31 @@ static void MoveGuard(Entity* guard, const int& tile_size, const Scene& level_sc
 
 	/* Calculate new lamps for the guard */
 	float lamp_size = 45.0f;
+	float lamp_width = 3.0f;
 	Vector2f lamp_points[3];
 	if (side_index == 0) // right
 	{
 		lamp_points[0] = { guard->rect.x + guard->rect.w, guard->rect.y };
-		lamp_points[1] = { guard->rect.x + lamp_size + guard->rect.w, guard->rect.y + lamp_size / 2.0f };
-		lamp_points[2] = { guard->rect.x + lamp_size + guard->rect.w, guard->rect.y - lamp_size / 2.0f };
+		lamp_points[1] = { guard->rect.x + lamp_size + guard->rect.w, guard->rect.y + lamp_size / lamp_width };
+		lamp_points[2] = { guard->rect.x + lamp_size + guard->rect.w, guard->rect.y - lamp_size / lamp_width };
 	}
 	else if (side_index == 1) // left
 	{
 		lamp_points[0] = { guard->rect.x, guard->rect.y };
-		lamp_points[1] = { guard->rect.x - lamp_size, guard->rect.y + lamp_size / 2.0f };
-		lamp_points[2] = { guard->rect.x - lamp_size, guard->rect.y - lamp_size / 2.0f };
+		lamp_points[1] = { guard->rect.x - lamp_size, guard->rect.y + lamp_size / lamp_width };
+		lamp_points[2] = { guard->rect.x - lamp_size, guard->rect.y - lamp_size / lamp_width };
 	}
 	else if (side_index == 2) // down
 	{
 		lamp_points[0] = { guard->rect.x, guard->rect.y + guard->rect.h };
-		lamp_points[1] = { guard->rect.x + lamp_size / 2.0f, guard->rect.y + lamp_size + guard->rect.h };
-		lamp_points[2] = { guard->rect.x - lamp_size / 2.0f, guard->rect.y + lamp_size + guard->rect.h };
+		lamp_points[1] = { guard->rect.x + lamp_size / lamp_width, guard->rect.y + lamp_size + guard->rect.h };
+		lamp_points[2] = { guard->rect.x - lamp_size / lamp_width, guard->rect.y + lamp_size + guard->rect.h };
 	}
 	else if (side_index == 3) // up
 	{
 		lamp_points[0] = { guard->rect.x, guard->rect.y };
-		lamp_points[1] = { guard->rect.x + lamp_size / 2.0f, guard->rect.y - lamp_size };
-		lamp_points[2] = { guard->rect.x - lamp_size / 2.0f, guard->rect.y - lamp_size };
+		lamp_points[1] = { guard->rect.x + lamp_size / lamp_width, guard->rect.y - lamp_size };
+		lamp_points[2] = { guard->rect.x - lamp_size / lamp_width, guard->rect.y - lamp_size };
 	}
 
 	guard_lamps[guard_index] = Polygon(lamp_points, 3, 0xb7c062);
@@ -402,7 +407,7 @@ void GameLevel::GuardTick()
 	//{
 	for (size_t i = 0; i < guard_spawn_points.size(); ++i)
 	{
-		guard_futures.push_back(std::async(std::launch::async, MoveGuard, &guards[i], tile_size, level_scene, level_tile_rects, rand, last_guard_side, i, guard_lamps, gates));
+		guard_futures.push_back(std::async(std::launch::async, MoveGuard, &guards[i], tile_size, level_scene, level_tile_rects, rand, last_guard_side, i, guard_lamps, gates, player));
 	}
 
 	/* Wait for the threads to finish */
@@ -594,6 +599,7 @@ void GameLevel::TenSecondTick()
 		}
 
 
+		resources->magic_sound.play();
 		ten_second_timer.Start();
 	}
 }

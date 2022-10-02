@@ -23,6 +23,8 @@ ResourceLoader::ResourceLoader()
 	gate_open_sound = Birb::Audio::SoundFile("./res/sfx/gate_open.wav");
 	key_pickup_sound = Birb::Audio::SoundFile("./res/sfx/key_pickup.wav");
 	level_clear_sound = Birb::Audio::SoundFile("./res/sfx/level_clear.wav");
+	magic_sound = Birb::Audio::SoundFile("./res/sfx/magic.wav");
+
 
 	Birb::Debug::Log("Resources loaded!");
 }

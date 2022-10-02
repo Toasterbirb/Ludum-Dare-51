@@ -24,6 +24,7 @@ public:
 	Birb::Audio::SoundFile gate_open_sound;
 	Birb::Audio::SoundFile key_pickup_sound;
 	Birb::Audio::SoundFile level_clear_sound;
+	Birb::Audio::SoundFile magic_sound;
 
 private:
 };
