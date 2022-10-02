@@ -96,6 +96,12 @@ int main(int argc, char** argv)
 			Debug::Log("Couldn't load level [" + std::to_string(i + 1) + "]", Debug::Type::error);
 	}
 
+	/* Player highlight area thingie. Helps to find the player
+	 * character when a new level starts */
+	float highlight_area_size = game_levels[current_level].player.rect.w * 3;
+	float highlight_speed = 100.0f;
+	Rect player_highlight_area = { 0, 0, 0, 0 };
+	player_highlight_area.color = game_levels[current_level].player.rect.color;
 
 	Debug::Log("Starting the game loop");
 	game_levels[current_level].Activate();
@@ -185,12 +191,20 @@ int main(int argc, char** argv)
 				++current_level;
 
 				if (current_level < level_count)
+				{
 					game_levels[current_level].Activate();
+					player_highlight_area.x = game_levels[current_level].player.rect.x - (highlight_area_size / 3);
+					player_highlight_area.y = game_levels[current_level].player.rect.y - (highlight_area_size / 3);
+					player_highlight_area.w = highlight_area_size;
+					player_highlight_area.h = highlight_area_size;
+					player_highlight_area.active = true;
+				}
 				else
+				{
 					victory_screen = true;
+				}
 			}
 		}
-
 
 		window.Clear();
 		/* Handle rendering */
@@ -230,6 +244,21 @@ int main(int argc, char** argv)
 
 			game_levels[current_level].LevelGuardScene().Render();
 			Render::DrawEntity(game_levels[current_level].diamond);
+
+			/* Draw the player highlight thingie */
+			if (player_highlight_area.w > 0)
+			{
+				Render::DrawRect(player_highlight_area.color, player_highlight_area);
+				player_highlight_area.x += timeStep.deltaTime * highlight_speed / 2;
+				player_highlight_area.y += timeStep.deltaTime * highlight_speed / 2;
+				player_highlight_area.w -= timeStep.deltaTime * highlight_speed;
+				player_highlight_area.h -= timeStep.deltaTime * highlight_speed;
+			}
+			else
+			{
+				player_highlight_area.active = false;
+			}
+
 			Render::DrawEntity(game_levels[current_level].player);
 
 			/* Draw the timer to the bottom right corner of the screen */
@@ -247,7 +276,6 @@ int main(int argc, char** argv)
 			/* If the pass timer is still running, stop it and set the victory text */
 			if (pass_timer.running)
 			{
-				std::cout << "Timer running..." << std::endl;
 				pass_timer.Stop();
 				pass_timer_text.SetText("Total time spent: " + pass_timer.DigitalFormat());
 			}
