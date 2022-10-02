@@ -19,7 +19,9 @@ GameLevel::GameLevel()
 GameLevel::GameLevel(std::string level_name, int tile_size, ResourceLoader& resources)
 :tile_size(tile_size), resources(&resources)
 {
-	/* Initialize some booleans */
+	/* Initialize some booleans and stuff */
+	player_next_to_gate = -1;
+	key_count = 0;
 	successful_level_load = false;
 	level_has_guards = false;
 	level_finished = false;
@@ -80,6 +82,7 @@ GameLevel::GameLevel(std::string level_name, int tile_size, ResourceLoader& reso
 				{
 					diamond_spawn_point = { i, j };
 					Debug::Log("Diamond spawn position: " + player_spawn_point.toString());
+					continue;
 				}
 
 				/* Find guard spawn positions */
@@ -88,6 +91,29 @@ GameLevel::GameLevel(std::string level_name, int tile_size, ResourceLoader& reso
 					level_has_guards = true;
 					guard_spawn_points.push_back({ i, j });
 					Debug::Log("Guard spawn position: " + guard_spawn_points[guard_spawn_points.size() - 1].toString());
+					continue;
+				}
+
+				/* Find gates */
+				if (CheckColor(tmpColor, Color(255, 130, 0)))
+				{
+					gates.push_back(Gate(resources, Vector2int(i, j), tile_size, rand));
+					Debug::Log("Gate spawn position: " + Vector2int(i, j).toString());
+					continue;
+				}
+				if (CheckColor(tmpColor, Color(143, 73, 0))) /* Rotated gate */
+				{
+					gates.push_back(Gate(resources, Vector2int(i, j), tile_size, rand, true));
+					Debug::Log("Gate spawn position: " + Vector2int(i, j).toString());
+					continue;
+				}
+
+				/* Find keys */
+				if (CheckColor(tmpColor, Color(255, 255, 0)))
+				{
+					keys.push_back(Key(resources, Vector2int(i, j), tile_size));
+					Debug::Log("Key spawn position: " + Vector2int(i, j).toString());
+					continue;
 				}
 			}
 		}
@@ -184,6 +210,16 @@ Scene GameLevel::LevelGuardLampScene() const
 		return Scene();
 }
 
+Scene GameLevel::LevelGateScene() const
+{
+	return gate_scene;
+}
+
+Scene GameLevel::LevelKeyScene() const
+{
+	return key_scene;
+}
+
 void GameLevel::StartGuards()
 {
 	GuardTick();
@@ -196,7 +232,7 @@ void GameLevel::StopGuards()
 }
 
 std::vector<std::future<void>> guard_futures;
-static void MoveGuard(Entity* guard, const int& tile_size, const Scene& level_scene, Rect* level_tile_rects, Random rand, int* last_guard_side, size_t guard_index, Polygon* guard_lamps)
+static void MoveGuard(Entity* guard, const int& tile_size, const Scene& level_scene, Rect* level_tile_rects, Random rand, int* last_guard_side, size_t guard_index, Polygon* guard_lamps, const std::vector<Gate>& gates)
 {
 	Rect test_pos = guard->rect;
 
@@ -224,9 +260,20 @@ static void MoveGuard(Entity* guard, const int& tile_size, const Scene& level_sc
 
 		valid_side = true;
 
+		/* Check for wall collisiosn */
 		for (int j = 0; j < level_scene.ObjectCount(); ++j)
 		{
 			if (Physics::RectCollision(sides[i], level_tile_rects[j]))
+			{
+				valid_side = false;
+				break;
+			}
+		}
+
+		/* Check for gate collisions */
+		for (size_t j = 0; j < gates.size(); ++j)
+		{
+			if (gates[j].is_open == false && Physics::RectCollision(sides[i], gates[j].entity.rect))
 			{
 				valid_side = false;
 				break;
@@ -322,7 +369,27 @@ void GameLevel::PlayerGuardCollisionCheck()
 void GameLevel::PlayerDiamondCollisionCheck()
 {
 	if (Physics::EntityCollision(player, diamond))
+	{
+		resources->level_clear_sound.play();
 		level_finished = true;
+	}
+}
+
+void GameLevel::PlayerKeyCollisionCheck()
+{
+	for (size_t i = 0; i < keys.size(); ++i)
+	{
+		/* Check if the key has already been taken */
+		if (!keys[i].entity.active)
+			continue;
+
+		if (Physics::EntityCollision(player, keys[i].entity))
+		{
+			++key_count;
+			resources->key_pickup_sound.play();
+			keys[i].entity.active = false;
+		}
+	}
 }
 
 void GameLevel::GuardTick()
@@ -335,7 +402,7 @@ void GameLevel::GuardTick()
 	//{
 	for (size_t i = 0; i < guard_spawn_points.size(); ++i)
 	{
-		guard_futures.push_back(std::async(std::launch::async, MoveGuard, &guards[i], tile_size, level_scene, level_tile_rects, rand, last_guard_side, i, guard_lamps));
+		guard_futures.push_back(std::async(std::launch::async, MoveGuard, &guards[i], tile_size, level_scene, level_tile_rects, rand, last_guard_side, i, guard_lamps, gates));
 	}
 
 	/* Wait for the threads to finish */
@@ -353,6 +420,11 @@ void GameLevel::GuardTick()
 	/* Restart the timer */
 	guard_tick_timer.Start();
 	//}
+}
+
+std::string GameLevel::timer_text() const
+{
+	return ten_second_timer.DigitalFormat();
 }
 
 void GameLevel::PlayerMove(PlayerMoveDirection direction)
@@ -383,6 +455,23 @@ void GameLevel::PlayerMove(PlayerMoveDirection direction)
 		if (Physics::RectCollision(test_pos, level_tile_rects[i]))
 			return;
 	}
+	for (size_t i = 0; i < gates.size(); ++i)
+	{
+		/* If the gate is closed and player has a key, open the gate */
+		if (gates[i].is_open == false && Physics::RectCollision(test_pos, gates[i].entity.rect))
+		{
+			if (key_count > 0)
+			{
+				gates[i].Open();
+				resources->gate_open_sound.play();
+				--key_count;
+			}
+			else
+			{
+				return;
+			}
+		}
+	}
 
 	player.rect = test_pos;
 
@@ -394,67 +483,115 @@ void GameLevel::PlayerMove(PlayerMoveDirection direction)
 
 	/* Check if the player collided with the diamond */
 	PlayerDiamondCollisionCheck();
+
+	/* Check if the player collided with a key */
+	PlayerKeyCollisionCheck();
 }
 
 void GameLevel::TenSecondTick()
 {
+	/* Don't do anything if the level wasn't loaded properly */
+	if (!successful_level_load)
+		return;
+
 	if (ten_second_timer.ElapsedSeconds() > 10.0)
 	{
+		/* Open / close a random gate */
+		if (gates.size() > 0)
+		{
+			int random_gate = rand.RandomInt(0, gates.size() - 1);
+
+			if (gates[random_gate].is_open)
+				gates[random_gate].Close();
+			else
+				gates[random_gate].Open();
+		}
+
 		/* Call a guard tick */
 		GuardTick();
 
-		/* Move a random tile that isn't one of the outer bound tiles */
-		bool found_working_tile = false;
-		do
+		/* Decide how many tiles to move */
+		int moving_tile_count = rand.RandomInt(1, 5);
+
+		for (int i = 0; i < moving_tile_count; ++i)
 		{
-			int random_tile_index = rand.RandomInt(0, level_scene.ObjectCount());
+			int max_tries = 3;
 
-			/* Make sure that the tile isn't a border tile */
-			if (level_tile_rects[random_tile_index].y == 0)
-				continue;
-
-			if (level_tile_rects[random_tile_index].x == 0)
-				continue;
-
-			if (level_tile_rects[random_tile_index].y == tile_size * (level_dimensions.y - 1))
-				continue;
-
-			if (level_tile_rects[random_tile_index].x == tile_size * (level_dimensions.x - 1))
-				continue;
-
-			int i = rand.RandomInt(0, 2);
-			int j = rand.RandomInt(0, 2);
-			Rect new_position = level_tile_rects[random_tile_index];
-
-			if (i == 0)
-				new_position.x += tile_size;
-			else
-				new_position.x -= tile_size;
-
-			if (j == 0)
-				new_position.y += tile_size;
-			else
-				new_position.y -= tile_size;
-
-			/* Don't move tiles over the diamond */
-			if (Physics::RectCollision(diamond.rect, new_position))
-				continue;
-
-			/* Don't move tiles over the player */
-			if (Physics::RectCollision(player.rect, new_position))
-				continue;
-
-			/* Don't move tiles over the guards */
-			for (size_t i = 0; i < guard_spawn_points.size(); ++i)
+			/* Move a random tile that isn't one of the outer bound tiles */
+			bool found_working_tile = false;
+			do
 			{
-				if (Physics::RectCollision(guards[i].rect, new_position))
+				max_tries--;
+				int random_tile_index = rand.RandomInt(0, level_scene.ObjectCount() - 1);
+
+				/* Make sure that the tile isn't a border tile */
+				if (level_tile_rects[random_tile_index].y == 0)
 					continue;
-			}
 
-			found_working_tile = true;
-			level_tile_rects[random_tile_index] = new_position;
+				if (level_tile_rects[random_tile_index].x == 0)
+					continue;
 
-		} while (!found_working_tile);
+				if (level_tile_rects[random_tile_index].y == tile_size * (level_dimensions.y - 1))
+					continue;
+
+				if (level_tile_rects[random_tile_index].x == tile_size * (level_dimensions.x - 1))
+					continue;
+
+				int i = rand.RandomInt(0, 2);
+				int j = rand.RandomInt(0, 2);
+				Rect new_position = level_tile_rects[random_tile_index];
+
+				if (i == 0)
+					new_position.x += tile_size;
+				else
+					new_position.x -= tile_size;
+
+				if (j == 0)
+					new_position.y += tile_size;
+				else
+					new_position.y -= tile_size;
+
+				/* Don't move tiles over the diamond */
+				if (Physics::RectCollision(diamond.rect, new_position))
+					continue;
+
+				/* Don't move tiles over the player */
+				if (Physics::RectCollision(player.rect, new_position))
+					continue;
+
+				/* Don't move tiles over the guards */
+				bool guard_collision = false;
+				for (size_t i = 0; i < guard_spawn_points.size(); ++i)
+				{
+					if (Physics::RectCollision(guards[i].rect, new_position))
+					{
+						guard_collision = true;
+						break;
+					}
+				}
+
+				if (guard_collision)
+					continue;
+
+				/* Don't move tiles over the gates */
+				bool gate_collision = false;
+				for (size_t i = 0; i < gates.size(); ++i)
+				{
+					if (Physics::RectCollision(gates[i].entity.rect, new_position))
+					{
+						gate_collision = true;
+						break;
+					}
+				}
+
+				if (gate_collision)
+					continue;
+
+				found_working_tile = true;
+				level_tile_rects[random_tile_index] = new_position;
+
+			} while (!found_working_tile && max_tries > 0);
+		}
 
 
 		ten_second_timer.Start();
@@ -464,6 +601,11 @@ void GameLevel::TenSecondTick()
 bool GameLevel::LevelLoadSuccessful() const
 {
 	return successful_level_load;
+}
+
+int GameLevel::KeyCount() const
+{
+	return key_count;
 }
 
 void GameLevel::Free()
@@ -511,6 +653,12 @@ void GameLevel::GenerateScene()
 	/* Create guard entities and make a scene for them */
 	if (level_has_guards)
 		GenerateGuardScene();
+
+	/* Create the gate scene */
+	GenerateGateScene();
+
+	/* Create the key scene */
+	GenerateKeyScene();
 }
 
 void GameLevel::GeneratePlayer()
@@ -521,6 +669,7 @@ void GameLevel::GeneratePlayer()
 			(tile_size / 4.0) + (tile_size * player_spawn_point.y),
 			tile_size / 2.0, tile_size / 2.0);
 	player.rect.color = 0x7ead71;
+	player.sprite = resources->player_texture;
 	player.renderingPriority = 6;
 }
 
@@ -554,6 +703,7 @@ void GameLevel::GenerateGuardScene()
 			tile_size / 2.0, tile_size / 2.0 );
 
 		guards[i].rect.color = 0xb13e51;
+		guards[i].sprite = resources->guard_texture;
 		guard_scene.AddObject(&guards[i]);
 		guard_lamp_scene.AddObject(&guard_lamps[i]);
 
@@ -563,5 +713,20 @@ void GameLevel::GenerateGuardScene()
 		/* Fill last guard sides with some random data */
 		last_guard_side[i] = rand.RandomInt(0, 4);
 	}
+}
 
+void GameLevel::GenerateGateScene()
+{
+	for (size_t i = 0; i < gates.size(); ++i)
+	{
+		gate_scene.AddObject(&gates[i].entity);
+	}
+}
+
+void GameLevel::GenerateKeyScene()
+{
+	for (size_t i = 0; i < keys.size(); ++i)
+	{
+		key_scene.AddObject(&keys[i].entity);
+	}
 }

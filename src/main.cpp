@@ -7,6 +7,7 @@ using namespace Birb;
 int main(int argc, char** argv)
 {
 	Debug::Log("Creating the window");
+
 	Window window("LD51: Diamond heist", Vector2int(1280, 720), 60, false);
 	TimeStep timeStep;
 	timeStep.Init(&window);
@@ -18,31 +19,79 @@ int main(int argc, char** argv)
 	level_background.AddObject(&background_rect);
 
 	ResourceLoader resources;
+	int tile_size = window.dimensions.y / 18;
 
 	/* The victory screen stuff */
 	Scene victory_scene;
-	Font small_font("./res/fonts/fortzilla/Fortzilla.ttf", 24);
-	Font big_font("./res/fonts/fortzilla/Fortzilla.ttf", 42);
-	Entity congratulation_text("Victory text", Vector2int(128, 128), EntityComponent::Text("Congratulations!", &big_font, &Colors::White));
-	Entity congratulation_text_2("Victory text 2", Vector2int(128, 256), EntityComponent::Text("You managed to yoink all of the diamonds\nand survived all of the challenges\nthat this game threw at you\n\nNow go play some other Ludum Dare games ;)", &small_font, &Colors::White));
+	Entity congratulation_text("Victory text", Vector2int(128, 128), EntityComponent::Text("Congratulations!", &resources.big_font, &Colors::White));
+	Entity congratulation_text_2("Victory text 2", Vector2int(128, 256), EntityComponent::Text("You managed to yoink all of the diamonds\nand survived all of the challenges\nthat this game threw at you\n\nNow go play some other Ludum Dare games ;)", &resources.small_font, &Colors::White));
 
 	victory_scene.AddObject(&congratulation_text);
 	victory_scene.AddObject(&congratulation_text_2);
 
+	/* Timer text */
+	Entity ten_second_timer_text("Timer text", Vector2int(window.dimensions.x - 150, window.dimensions.y - 32), EntityComponent::Text("", &resources.small_font, &Colors::White));
+
+	/** Tutorial scenes **/
+
+	/* Level 1 */
+	Scene tutorial_scene_1;
+	Entity level_1_tutorial_text("Tutorial text level 1", Vector2int(320, 400), EntityComponent::Text("You can move around with the Arrow Keys or WASD", &resources.small_font, &Colors::White));
+	tutorial_scene_1.AddObject(&level_1_tutorial_text);
+
+	Entity level_1_tutorial_text2("Tutorial text2 level 1", Vector2int(760, 198), EntityComponent::Text("Your task is to steal\nthese shiny things", &resources.tiny_font, &Colors::White));
+	tutorial_scene_1.AddObject(&level_1_tutorial_text2);
+
+	Entity diamond_arrow("Diamond arrow level 1", Rect(935, 207, 64, 22), resources.arrow_texture);
+	tutorial_scene_1.AddObject(&diamond_arrow);
+
+	/* Level 2 */
+	Scene tutorial_scene_2;
+	Entity level_2_tutorial_text("Tutorial text level 2", Vector2int(380, 500), EntityComponent::Text("Avoid the wandering guards!\n\nIf they notice you, you'll have to run\nback to the start...", &resources.small_font, &Colors::White));
+	tutorial_scene_2.AddObject(&level_2_tutorial_text);
+
+	/* Level 3 */
+	Scene tutorial_scene_3;
+	Entity level_3_tutorial_text("Tutorial text level 3", Vector2int(355, (int)ten_second_timer_text.rect.y), EntityComponent::Text("Magical things happen when this clock hits the 10th second ->", &resources.small_font, &Colors::White));
+	tutorial_scene_3.AddObject(&level_3_tutorial_text);
+
+	/* Level 4 */
+	Scene tutorial_scene_4;
+	Entity level_4_tutorial_text("Tutorial text level 4", Vector2int(250, 20), EntityComponent::Text("You can pick up these keys and use them to force gates open.\nA key is consumed when you walk trough a closed gate!", &resources.tiny_font, &Colors::White));
+	Entity key_arrow("Key arrow level 4", Rect(180, 60, 64, 22), resources.arrow_texture);
+	key_arrow.angle = 150;
+	tutorial_scene_4.AddObject(&level_4_tutorial_text);
+	tutorial_scene_4.AddObject(&key_arrow);
+
+	/** Key counter **/
+	Scene key_counter;
+	Entity key_counter_sprite("Key counter sprite", Rect(1000, ten_second_timer_text.rect.y - 6, tile_size, tile_size), resources.key_texture);
+	Entity key_counter_text("Key counter text", Vector2int(980, (int)ten_second_timer_text.rect.y + 3), EntityComponent::Text("0", &resources.tiny_font, &Colors::White));
+
+	key_counter.AddObject(&key_counter_sprite);
+	key_counter.AddObject(&key_counter_text);
+
+
 	/* Read all of the levels */
 	int current_level = 0;
-	const int level_count = 5;
+	const int level_count = 6;
 	std::string level_names[level_count] = {
 		"level_1",
 		"level_2",
 		"level_3",
 		"level_4",
-		"test_level"
+		"level_5",
+		"level_6"
 	};
+
+	/* Custom current level */
+	if (argc == 2)
+		current_level = std::stoi(argv[1]);
+
 
 	GameLevel game_levels[level_count];
 	for (int i = 0; i < level_count; ++i)
-		game_levels[i] = GameLevel(level_names[i], 40, resources);
+		game_levels[i] = GameLevel(level_names[i], tile_size, resources);
 
 	/* Check if all of the levels loaded up fine */
 	for (int i = 0; i < level_count; ++i)
@@ -121,6 +170,8 @@ int main(int argc, char** argv)
 		/* Game logic */
 		if (!victory_screen)
 		{
+			ten_second_timer_text.SetText(game_levels[current_level].timer_text());
+
 			//game_levels[current_level].GuardTick();
 			game_levels[current_level].TenSecondTick();
 
@@ -144,11 +195,48 @@ int main(int argc, char** argv)
 
 		if (!victory_screen)
 		{
+
 			game_levels[current_level].LevelGuardLampScene().Render();
 			game_levels[current_level].LevelWallScene().Render();
+			game_levels[current_level].LevelGateScene().Render();
+			game_levels[current_level].LevelKeyScene().Render();
+
+			/* Tutorial scenes */
+			switch (current_level)
+			{
+				case (0):
+					tutorial_scene_1.Render();
+					break;
+
+				case (1):
+					tutorial_scene_2.Render();
+					break;
+
+				case (2):
+					tutorial_scene_3.Render();
+					break;
+
+				case (3):
+					tutorial_scene_4.Render();
+					break;
+
+				default:
+					break;
+			}
+
 			game_levels[current_level].LevelGuardScene().Render();
 			Render::DrawEntity(game_levels[current_level].diamond);
 			Render::DrawEntity(game_levels[current_level].player);
+
+			/* Draw the timer to the bottom right corner of the screen */
+			Render::DrawEntity(ten_second_timer_text);
+
+			/* Draw the key counter whenever the player has any keys */
+			if (game_levels[current_level].KeyCount() > 0)
+			{
+				key_counter_text.SetText(std::to_string(game_levels[current_level].KeyCount()));
+				key_counter.Render();
+			}
 		}
 		else
 		{
@@ -165,6 +253,8 @@ int main(int argc, char** argv)
 	/* Free the levels */
 	for (int i = 0; i < level_count; ++i)
 		game_levels[i].Free();
+
+	resources.Free();
 
 	return 0;
 }
