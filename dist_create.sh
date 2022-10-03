@@ -6,7 +6,7 @@ echo "Removing existing build binaries"
 [ -d ./build ] && rm -rv ./build
 mkdir ./build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_BUILD_TYPE=Release -DSTATIC_SDL=On
 make -j$(nproc)
 
 mkdir diamond-heist
