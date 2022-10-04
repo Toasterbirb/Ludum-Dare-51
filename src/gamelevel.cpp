@@ -230,7 +230,10 @@ void GameLevel::StopGuards()
 	guard_tick_timer.Stop();
 }
 
+#ifndef __WINDOWS__
 std::vector<std::future<void>> guard_futures;
+#endif
+
 static void MoveGuard(Entity* guard, const int& tile_size, const Scene& level_scene, Rect* level_tile_rects, Random rand, int* last_guard_side, size_t guard_index, Polygon* guard_lamps, const std::vector<Gate>& gates, const Entity& player)
 {
 	Rect test_pos = guard->rect;
@@ -407,9 +410,14 @@ void GameLevel::GuardTick()
 	//{
 	for (size_t i = 0; i < guard_spawn_points.size(); ++i)
 	{
+#ifndef __WINDOWS__
 		guard_futures.push_back(std::async(std::launch::async, MoveGuard, &guards[i], tile_size, level_scene, level_tile_rects, rand, last_guard_side, i, guard_lamps, gates, player));
+#else
+		MoveGuard(&guards[i], tile_size, level_scene, level_tile_rects, rand, last_guard_side, i, guard_lamps, gates, player);
+#endif
 	}
 
+#ifndef __WINDOWS__
 	/* Wait for the threads to finish */
 	for (size_t i = 0; i < guard_futures.size(); ++i)
 	{
@@ -418,6 +426,7 @@ void GameLevel::GuardTick()
 
 	/* Clear out all futures */
 	guard_futures.clear();
+#endif
 
 	/* Check if the player got hit by any of the guard flashlights */
 	PlayerGuardCollisionCheck();
