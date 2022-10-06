@@ -42,9 +42,9 @@ GameLevel::GameLevel(std::string level_name, int tile_size, ResourceLoader& reso
 	SDL_FreeSurface(level_surface);
 
 	/* Allocate the level pixels */
-	Vector2int level_dimensions = { 32, 18 };
+	Vector2Int level_dimensions = { 32, 18 };
 	this->level_dimensions = level_dimensions;
-	level_pixels = new Vector2int[level_dimensions.x * level_dimensions.y];
+	level_pixels = new Vector2Int[level_dimensions.x * level_dimensions.y];
 
 	/* Reset all of the level pixels */
 	for (int i = 0; i < level_dimensions.x * level_dimensions.y; ++i)
@@ -58,7 +58,7 @@ GameLevel::GameLevel(std::string level_name, int tile_size, ResourceLoader& reso
 		{
 			for (int j = 0; j < level_dimensions.y; ++j)
 			{
-				tmpColor = utils::TexturePixelToColor(pixels, Vector2int(i, j), level_dimensions.x);
+				tmpColor = utils::TexturePixelToColor(pixels, Vector2Int(i, j), level_dimensions.x);
 
 				/* Check if the pixel is a level pixel */
 				/* Levle pixel color = R: 67, G: 67, B: 67 */
@@ -72,7 +72,7 @@ GameLevel::GameLevel(std::string level_name, int tile_size, ResourceLoader& reso
 				if (CheckColor(tmpColor, Color(0, 255, 0)))
 				{
 					player_spawn_point = { i , j };
-					Debug::Log("Player spawn position: " + player_spawn_point.toString());
+					Debug::Log("Player spawn position: " + player_spawn_point.ToString());
 					continue;
 				}
 
@@ -80,7 +80,7 @@ GameLevel::GameLevel(std::string level_name, int tile_size, ResourceLoader& reso
 				if (CheckColor(tmpColor, Color(139, 165, 255)))
 				{
 					diamond_spawn_point = { i, j };
-					Debug::Log("Diamond spawn position: " + player_spawn_point.toString());
+					Debug::Log("Diamond spawn position: " + player_spawn_point.ToString());
 					continue;
 				}
 
@@ -89,29 +89,29 @@ GameLevel::GameLevel(std::string level_name, int tile_size, ResourceLoader& reso
 				{
 					level_has_guards = true;
 					guard_spawn_points.push_back({ i, j });
-					Debug::Log("Guard spawn position: " + guard_spawn_points[guard_spawn_points.size() - 1].toString());
+					Debug::Log("Guard spawn position: " + guard_spawn_points[guard_spawn_points.size() - 1].ToString());
 					continue;
 				}
 
 				/* Find gates */
 				if (CheckColor(tmpColor, Color(255, 130, 0)))
 				{
-					gates.push_back(Gate(resources, Vector2int(i, j), tile_size, rand));
-					Debug::Log("Gate spawn position: " + Vector2int(i, j).toString());
+					gates.push_back(Gate(resources, Vector2Int(i, j), tile_size, rand));
+					Debug::Log("Gate spawn position: " + Vector2Int(i, j).ToString());
 					continue;
 				}
 				if (CheckColor(tmpColor, Color(143, 73, 0))) /* Rotated gate */
 				{
-					gates.push_back(Gate(resources, Vector2int(i, j), tile_size, rand, true));
-					Debug::Log("Gate spawn position: " + Vector2int(i, j).toString());
+					gates.push_back(Gate(resources, Vector2Int(i, j), tile_size, rand, true));
+					Debug::Log("Gate spawn position: " + Vector2Int(i, j).ToString());
 					continue;
 				}
 
 				/* Find keys */
 				if (CheckColor(tmpColor, Color(255, 255, 0)))
 				{
-					keys.push_back(Key(resources, Vector2int(i, j), tile_size));
-					Debug::Log("Key spawn position: " + Vector2int(i, j).toString());
+					keys.push_back(Key(resources, Vector2Int(i, j), tile_size));
+					Debug::Log("Key spawn position: " + Vector2Int(i, j).ToString());
 					continue;
 				}
 			}
@@ -131,7 +131,7 @@ GameLevel::GameLevel(std::string level_name, int tile_size, ResourceLoader& reso
 	{
 		for (int i = 0; i < level_dimensions.x; ++i)
 		{
-			if (level_pixels[utils::FlatIndex({ i, j }, { level_dimensions.x, level_dimensions.y })] == Vector2int({ -1, -1 }))
+			if (level_pixels[utils::FlatIndex({ i, j }, { level_dimensions.x, level_dimensions.y })] == Vector2Int({ -1, -1 }))
 			{
 				std::cout << "  ";
 			}
@@ -165,9 +165,9 @@ void GameLevel::Deactivate()
 	StopGuards();
 }
 
-std::vector<Vector2int> GameLevel::GetLevelPixels() const
+std::vector<Vector2Int> GameLevel::GetLevelPixels() const
 {
-	std::vector<Vector2int> pixel_list;
+	std::vector<Vector2Int> pixel_list;
 	pixel_list.reserve(level_dimensions.x * level_dimensions.y);
 
 	for (int i = 0; i < level_dimensions.x; ++i)
@@ -175,7 +175,7 @@ std::vector<Vector2int> GameLevel::GetLevelPixels() const
 		for (int j = 0; j < level_dimensions.y; ++j)
 		{
 			int index = utils::FlatIndex({ i, j }, level_dimensions);
-			if (level_pixels[index] != Vector2int({ -1, -1 }))
+			if (level_pixels[index] != Vector2Int({ -1, -1 }))
 			{
 				pixel_list.push_back(level_pixels[index]);
 			}
@@ -331,7 +331,7 @@ static void MoveGuard(Entity* guard, const int& tile_size, const Scene& level_sc
 	/* Calculate new lamps for the guard */
 	float lamp_size = 45.0f;
 	float lamp_width = 3.0f;
-	Vector2f lamp_points[3];
+	Vector2 lamp_points[3];
 	if (side_index == 0) // right
 	{
 		lamp_points[0] = { guard->rect.x + guard->rect.w, guard->rect.y };
@@ -644,7 +644,7 @@ void GameLevel::GenerateScene()
 {
 	Debug::Log("Generating the level scene");
 
-	std::vector<Vector2int> level_tile_positions = GetLevelPixels();
+	std::vector<Vector2Int> level_tile_positions = GetLevelPixels();
 
 	/* Create a rectangle for each of the tiles */
 	level_tile_rects = new Rect[level_tile_positions.size()];
@@ -723,7 +723,7 @@ void GameLevel::GenerateGuardScene()
 		guard_lamp_scene.AddObject(&guard_lamps[i]);
 
 		/* Fill the guard lamps with some data */
-		guard_lamps[i] = Polygon({Vector2f(-1, -1), Vector2f(-1, -1), Vector2f(-1, -1)});
+		guard_lamps[i] = Polygon({Vector2(-1, -1), Vector2(-1, -1), Vector2(-1, -1)});
 
 		/* Fill last guard sides with some random data */
 		last_guard_side[i] = rand.RandomInt(0, 4);

@@ -10,7 +10,7 @@ int main(int argc, char** argv)
 {
 	Debug::Log("Creating the window");
 
-	Window window("LD51: Diamond heist", Vector2int(1280, 720), 60, false);
+	Window window("LD51: Diamond heist", Vector2Int(1280, 720), 60, false);
 	TimeStep timeStep;
 	timeStep.Init(&window);
 
@@ -25,26 +25,26 @@ int main(int argc, char** argv)
 
 	/* The victory screen stuff */
 	Scene victory_scene;
-	Entity congratulation_text("Victory text", Vector2int(128, 128), EntityComponent::Text("Congratulation!", &resources.big_font, &Colors::White));
-	Entity congratulation_text_2("Victory text 2", Vector2int(128, 256), EntityComponent::Text("You managed to yoink all of the diamonds\nand survived all of the challenges\nthat this game threw at you\n\nNow go play some other Ludum Dare games ;)", &resources.small_font, &Colors::White));
+	Entity congratulation_text("Victory text", Vector2Int(128, 128), EntityComponent::Text("Congratulation!", &resources.big_font, &Colors::White));
+	Entity congratulation_text_2("Victory text 2", Vector2Int(128, 256), EntityComponent::Text("You managed to yoink all of the diamonds\nand survived all of the challenges\nthat this game threw at you\n\nNow go play some other Ludum Dare games ;)", &resources.small_font, &Colors::White));
 	Color pass_timer_color(0xabff93);
-	Entity pass_timer_text("Pass timer text", Vector2int(128, 512), EntityComponent::Text("No time for you cheater :/", &resources.big_font, &pass_timer_color));
+	Entity pass_timer_text("Pass timer text", Vector2Int(128, 512), EntityComponent::Text("No time for you cheater :/", &resources.big_font, &pass_timer_color));
 
 	victory_scene.AddObject(&congratulation_text);
 	victory_scene.AddObject(&congratulation_text_2);
 	victory_scene.AddObject(&pass_timer_text);
 
 	/* Timer text */
-	Entity ten_second_timer_text("Timer text", Vector2int(window.dimensions.x - 150, window.dimensions.y - 32), EntityComponent::Text("", &resources.small_font, &Colors::White));
+	Entity ten_second_timer_text("Timer text", Vector2Int(window.dimensions.x - 150, window.dimensions.y - 32), EntityComponent::Text("", &resources.small_font, &Colors::White));
 
 	/** Tutorial scenes **/
 
 	/* Level 1 */
 	Scene tutorial_scene_1;
-	Entity level_1_tutorial_text("Tutorial text level 1", Vector2int(320, 400), EntityComponent::Text("You can move around with the Arrow Keys or WASD", &resources.small_font, &Colors::White));
+	Entity level_1_tutorial_text("Tutorial text level 1", Vector2Int(320, 400), EntityComponent::Text("You can move around with the Arrow Keys or WASD", &resources.small_font, &Colors::White));
 	tutorial_scene_1.AddObject(&level_1_tutorial_text);
 
-	Entity level_1_tutorial_text2("Tutorial text2 level 1", Vector2int(760, 198), EntityComponent::Text("Your task is to steal\nthese shiny things", &resources.tiny_font, &Colors::White));
+	Entity level_1_tutorial_text2("Tutorial text2 level 1", Vector2Int(760, 198), EntityComponent::Text("Your task is to steal\nthese shiny things", &resources.tiny_font, &Colors::White));
 	tutorial_scene_1.AddObject(&level_1_tutorial_text2);
 
 	Entity diamond_arrow("Diamond arrow level 1", Rect(935, 207, 64, 22), resources.arrow_texture);
@@ -52,17 +52,17 @@ int main(int argc, char** argv)
 
 	/* Level 2 */
 	Scene tutorial_scene_2;
-	Entity level_2_tutorial_text("Tutorial text level 2", Vector2int(380, 500), EntityComponent::Text("Avoid the wandering guards!\n\nIf they notice you, you'll have to run\nback to the start...", &resources.small_font, &Colors::White));
+	Entity level_2_tutorial_text("Tutorial text level 2", Vector2Int(380, 500), EntityComponent::Text("Avoid the wandering guards!\n\nIf they notice you, you'll have to run\nback to the start...", &resources.small_font, &Colors::White));
 	tutorial_scene_2.AddObject(&level_2_tutorial_text);
 
 	/* Level 3 */
 	Scene tutorial_scene_3;
-	Entity level_3_tutorial_text("Tutorial text level 3", Vector2int(355, (int)ten_second_timer_text.rect.y), EntityComponent::Text("Magical things happen when this clock hits the 10th second ->", &resources.small_font, &Colors::White));
+	Entity level_3_tutorial_text("Tutorial text level 3", Vector2Int(355, (int)ten_second_timer_text.rect.y), EntityComponent::Text("Magical things happen when this clock hits the 10th second ->", &resources.small_font, &Colors::White));
 	tutorial_scene_3.AddObject(&level_3_tutorial_text);
 
 	/* Level 4 */
 	Scene tutorial_scene_4;
-	Entity level_4_tutorial_text("Tutorial text level 4", Vector2int(250, 20), EntityComponent::Text("You can pick up these keys and use them to force gates open.\nA key is consumed when you walk trough a closed gate!", &resources.tiny_font, &Colors::White));
+	Entity level_4_tutorial_text("Tutorial text level 4", Vector2Int(250, 20), EntityComponent::Text("You can pick up these keys and use them to force gates open.\nA key is consumed when you walk trough a closed gate!", &resources.tiny_font, &Colors::White));
 	Entity key_arrow("Key arrow level 4", Rect(180, 60, 64, 22), resources.arrow_texture);
 	key_arrow.angle = 150;
 	tutorial_scene_4.AddObject(&level_4_tutorial_text);
@@ -71,7 +71,7 @@ int main(int argc, char** argv)
 	/** Key counter **/
 	Scene key_counter;
 	Entity key_counter_sprite("Key counter sprite", Rect(1000, ten_second_timer_text.rect.y - 6, tile_size, tile_size), resources.key_texture);
-	Entity key_counter_text("Key counter text", Vector2int(980, (int)ten_second_timer_text.rect.y + 3), EntityComponent::Text("0", &resources.tiny_font, &Colors::White));
+	Entity key_counter_text("Key counter text", Vector2Int(980, (int)ten_second_timer_text.rect.y + 3), EntityComponent::Text("0", &resources.tiny_font, &Colors::White));
 
 	key_counter.AddObject(&key_counter_sprite);
 	key_counter.AddObject(&key_counter_text);

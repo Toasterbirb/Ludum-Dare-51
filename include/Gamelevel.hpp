@@ -11,7 +11,7 @@ struct Gate
 	Birb::Texture& open_gate;
 	Birb::Texture& closed_gate;
 
-	Gate(ResourceLoader& resources, Birb::Vector2int spawn_point, int tile_size, Birb::Random rand, bool rotated_gate = false)
+	Gate(ResourceLoader& resources, Birb::Vector2Int spawn_point, int tile_size, Birb::Random rand, bool rotated_gate = false)
 	:open_gate(resources.open_gate), closed_gate(resources.closed_gate)
 	{
 		/* Decide if the gate should start as open or closed */
@@ -51,7 +51,7 @@ struct Key
 {
 	Birb::Entity entity;
 
-	Key(ResourceLoader& resources, Birb::Vector2int spawn_point, int tile_size)
+	Key(ResourceLoader& resources, Birb::Vector2Int spawn_point, int tile_size)
 	{
 		entity.rect = Birb::Rect(spawn_point.x * tile_size, spawn_point.y * tile_size, tile_size, tile_size);
 		entity.sprite = resources.key_texture;
@@ -67,7 +67,7 @@ public:
 	void Activate(); ///< Starts the level timer
 	void Deactivate(); ///< Stops the level timer and AI
 
-	std::vector<Birb::Vector2int> GetLevelPixels() const;
+	std::vector<Birb::Vector2Int> GetLevelPixels() const;
 	Birb::Scene LevelWallScene() const;
 	Birb::Scene LevelGuardScene() const;
 	Birb::Scene LevelGuardLampScene() const;
@@ -106,8 +106,8 @@ private:
 	ResourceLoader* resources;
 
 	/* Level wall details and stuff */
-	Birb::Vector2int level_dimensions;
-	Birb::Vector2int* level_pixels;
+	Birb::Vector2Int level_dimensions;
+	Birb::Vector2Int* level_pixels;
 	Birb::Scene level_scene;
 	bool successful_level_load;
 
@@ -117,16 +117,16 @@ private:
 	void PlayerGuardCollisionCheck();
 	void PlayerDiamondCollisionCheck();
 	void PlayerKeyCollisionCheck();
-	Birb::Vector2int player_spawn_point;
+	Birb::Vector2Int player_spawn_point;
 	int player_next_to_gate;
 
 	/* Diamond stuff */
-	Birb::Vector2int diamond_spawn_point;
+	Birb::Vector2Int diamond_spawn_point;
 
 	/* Guard stuff */
 	bool level_has_guards;
 	Birb::Random rand;
-	std::vector<Birb::Vector2int> guard_spawn_points;
+	std::vector<Birb::Vector2Int> guard_spawn_points;
 	Birb::Scene guard_scene;
 	Birb::Entity* guards;
 	Birb::Polygon* guard_lamps;
